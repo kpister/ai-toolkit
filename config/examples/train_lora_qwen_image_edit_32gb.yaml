@@ -2,18 +2,18 @@
 job: extension
 config:
   # this name will be the folder and filename name
-  name: "my_first_qwen_image_edit_lora_v1"
+  name: "qwen_image_edit_lora_v1.2"
   process:
-    - type: 'sd_trainer'
+    - type: "sd_trainer"
       # root folder to save training sessions/samples/weights
-      training_folder: "output"
+      training_folder: "/root/ai-toolkit/modal_output" # must match MOUNT_DIR from run_modal.py
       # uncomment to see performance stats in the terminal every N steps
-#      performance_log_every: 1000
+      #      performance_log_every: 1000
       device: cuda:0
       # if a trigger word is specified, it will be added to captions of training data if it does not already exist
       # alternatively, in your captions you can add [trigger] and it will be replaced with the trigger word
       # Trigger words will not work when caching text embeddings
-#      trigger_word: "p3r5on"
+      #      trigger_word: "p3r5on"
       network:
         type: "lora"
         linear: 16
@@ -28,75 +28,64 @@ config:
         # images will automatically be resized and bucketed into the resolution specified
         # on windows, escape back slashes with another backslash so
         # "C:\\path\\to\\images\\folder"
-        - folder_path: "/path/to/images/folder"
-          control_path: "/path/to/control/images/folder"
+        - folder_path: "/qwen-data/images"
+          control_path: "/qwen-data/silos"
           caption_ext: "txt"
           # default_caption: "a person" # if caching text embeddings, if you don't have captions, this will get cached
-          caption_dropout_rate: 0.05  # will drop out the caption 5% of time
-          resolution: [ 512, 768, 1024 ]  # qwen image enjoys multiple resolutions
+          caption_dropout_rate: 0.05 # will drop out the caption 5% of time
+          resolution: [512, 768, 1024, 1344, 1600] # qwen image enjoys multiple resolutions
+          # Adaptive batch sizing - scales batch size based on resolution to maintain consistent memory usage
+          adaptive_batch_size: true # enable adaptive batch sizing
+          base_resolution: 512 # reference resolution for batch_size setting (512x512 will use full batch_size)
+          num_workers: 32
+          prefetch_factor: 2
       train:
-        batch_size: 1
+        batch_size: 32
         # caching text embeddings is required for 32GB
         cache_text_embeddings: true
-        
-        steps: 3000  # total number of steps to train 500 - 4000 is a good range
+
+        steps: 3000 # total number of steps to train 500 - 4000 is a good range
         gradient_accumulation: 1
         timestep_type: "weighted"
         train_unet: true
-        train_text_encoder: false  # probably won't work with qwen image
-        gradient_checkpointing: true  # need the on unless you have a ton of vram
+        train_text_encoder: false # probably won't work with qwen image
+        gradient_checkpointing: true # need the on unless you have a ton of vram
         noise_scheduler: "flowmatch" # for training only
         optimizer: "adamw8bit"
-        lr: 1e-4
+        lr: 4e-4
         # uncomment this to skip the pre training sample
-#        skip_first_sample: true
+        skip_first_sample: true
         # uncomment to completely disable sampling
-#        disable_sampling: true
+        disable_sampling: false
         dtype: bf16
       model:
         # huggingface model name or path
         name_or_path: "Qwen/Qwen-Image-Edit"
         arch: "qwen_image_edit"
-        quantize: true
+        quantize: false
         # qtype_te: "qfloat8" Default float8 qquantization
         # to use the ARA use the | pipe to point to hf path, or a local path if you have one.
         # 3bit is required for 32GB
-        qtype: "uint3|qwen_image_edit_torchao_uint3.safetensors"
-        quantize_te: true
-        qtype_te: "qfloat8"
-        low_vram: true
+        # qtype: "uint3|qwen_image_edit_torchao_uint3.safetensors"
+        # quantize_te: true
+        # qtype_te: "qfloat8"
+        low_vram: false
       sample:
         sampler: "flowmatch" # must match train.noise_scheduler
-        sample_every: 250 # sample every this many steps
-        width: 1024
-        height: 1024
-        samples:
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
-          - prompt: "do the thing to it"
-            ctrl_img: "/path/to/control/image.jpg"
+        sample_every: 50 # sample every this many steps
+        width: 1600
+        height: 1600
         neg: ""
         seed: 42
         walk_seed: true
         guidance_scale: 3
         sample_steps: 25
+        samples:
+          - prompt: "<ALL3D> A photograph of a modern light gray three-drawer dresser in a bedroom, featuring round knobs and tapered legs with a metal cross-stretcher, set on a wood floor beside a white upholstered bed.\ndresser, modern furniture, light gray finish, three drawers, round knobs, tapered legs, metal cross-stretcher base, clean lines, on top: ribbed ceramic vase, two yellow vases, setting: bedroom, white upholstered bed, wood floor, off-white wall, baseboard trim, cream patterned rug, composition: medium shot, eye-level view, product photography, style: clean, minimalist, warm, natural lighting, soft shadows"
+            ctrl_img: "/qwen-data/silos/308213320.png"
+          - prompt: "<ALL3D> A photograph of a modern brushed brass adjustable floor lamp with a conical metal shade and square base, positioned beside a white upholstered sofa on a natural fiber rug in a living room.\nfloor lamp, modern lighting, brushed brass, adjustable arm, pivot joints, conical metal shade, square base, slim profile, adjacent: white upholstered sofa, yellow throw pillow, setting: living room, off-white wall, left window with white trim, light wood floor, natural fiber rug, baseboard molding, composition: medium shot, eye-level view, product photography, style: clean, minimalist, warm, natural lighting, soft shadows"
+            ctrl_img: "/qwen-data/silos/312214639.png"
 # you can add any additional meta info here. [name] is replaced with config name at top
 meta:
-  name: "[name]"
-  version: '1.0'
+  name: "insert"
+  version: "1.1"

@@ -4,22 +4,33 @@ from typing import Union, List, Optional, Dict, Any, Tuple, Callable
 
 import numpy as np
 import torch
-from diffusers import StableDiffusionXLPipeline, StableDiffusionPipeline, LMSDiscreteScheduler, FluxPipeline, FluxControlPipeline
+from diffusers import (
+    StableDiffusionXLPipeline,
+    StableDiffusionPipeline,
+    LMSDiscreteScheduler,
+    FluxPipeline,
+    FluxControlPipeline,
+)
 from diffusers.pipelines.flux.pipeline_flux import calculate_shift, retrieve_timesteps
 from diffusers.pipelines.flux.pipeline_output import FluxPipelineOutput
 from diffusers.pipelines.stable_diffusion import StableDiffusionPipelineOutput
+
 # from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_k_diffusion import ModelWrapper
-from diffusers.pipelines.stable_diffusion_xl.pipeline_output import StableDiffusionXLPipelineOutput
-from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import rescale_noise_cfg
+from diffusers.pipelines.stable_diffusion_xl.pipeline_output import (
+    StableDiffusionXLPipelineOutput,
+)
+from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import (
+    rescale_noise_cfg,
+)
 from diffusers.utils import is_torch_xla_available
-from k_diffusion.external import CompVisVDenoiser, CompVisDenoiser
-from k_diffusion.sampling import get_sigmas_karras, BrownianTreeNoiseSampler
+
+# from k_diffusion.external import CompVisVDenoiser, CompVisDenoiser
+# from k_diffusion.sampling import get_sigmas_karras, BrownianTreeNoiseSampler
 from toolkit.models.flux import bypass_flux_guidance, restore_flux_guidance
 from diffusers.image_processor import PipelineImageInput
 from PIL import Image
 import torch.nn.functional as F
 from torchvision import transforms
-
 
 
 if is_torch_xla_available():
@@ -29,19 +40,19 @@ if is_torch_xla_available():
 else:
     XLA_AVAILABLE = False
 
-class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
 
+class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
     def __init__(
-            self,
-            vae: 'AutoencoderKL',
-            text_encoder: 'CLIPTextModel',
-            text_encoder_2: 'CLIPTextModelWithProjection',
-            tokenizer: 'CLIPTokenizer',
-            tokenizer_2: 'CLIPTokenizer',
-            unet: 'UNet2DConditionModel',
-            scheduler: 'KarrasDiffusionSchedulers',
-            force_zeros_for_empty_prompt: bool = True,
-            add_watermarker: Optional[bool] = None,
+        self,
+        vae: "AutoencoderKL",
+        text_encoder: "CLIPTextModel",
+        text_encoder_2: "CLIPTextModelWithProjection",
+        tokenizer: "CLIPTokenizer",
+        tokenizer_2: "CLIPTokenizer",
+        unet: "UNet2DConditionModel",
+        scheduler: "KarrasDiffusionSchedulers",
+        force_zeros_for_empty_prompt: bool = True,
+        add_watermarker: Optional[bool] = None,
     ):
         super().__init__(
             vae=vae,
@@ -68,36 +79,35 @@ class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
 
     @torch.no_grad()
     def __call__(
-            self,
-            prompt: Union[str, List[str]] = None,
-            prompt_2: Optional[Union[str, List[str]]] = None,
-            height: Optional[int] = None,
-            width: Optional[int] = None,
-            num_inference_steps: int = 50,
-            denoising_end: Optional[float] = None,
-            guidance_scale: float = 5.0,
-            negative_prompt: Optional[Union[str, List[str]]] = None,
-            negative_prompt_2: Optional[Union[str, List[str]]] = None,
-            num_images_per_prompt: Optional[int] = 1,
-            eta: float = 0.0,
-            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-            latents: Optional[torch.FloatTensor] = None,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            output_type: Optional[str] = "pil",
-            return_dict: bool = True,
-            callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
-            callback_steps: int = 1,
-            cross_attention_kwargs: Optional[Dict[str, Any]] = None,
-            guidance_rescale: float = 0.0,
-            original_size: Optional[Tuple[int, int]] = None,
-            crops_coords_top_left: Tuple[int, int] = (0, 0),
-            target_size: Optional[Tuple[int, int]] = None,
-            use_karras_sigmas: bool = False,
+        self,
+        prompt: Union[str, List[str]] = None,
+        prompt_2: Optional[Union[str, List[str]]] = None,
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        num_inference_steps: int = 50,
+        denoising_end: Optional[float] = None,
+        guidance_scale: float = 5.0,
+        negative_prompt: Optional[Union[str, List[str]]] = None,
+        negative_prompt_2: Optional[Union[str, List[str]]] = None,
+        num_images_per_prompt: Optional[int] = 1,
+        eta: float = 0.0,
+        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+        latents: Optional[torch.FloatTensor] = None,
+        prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+        pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        output_type: Optional[str] = "pil",
+        return_dict: bool = True,
+        callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+        callback_steps: int = 1,
+        cross_attention_kwargs: Optional[Dict[str, Any]] = None,
+        guidance_rescale: float = 0.0,
+        original_size: Optional[Tuple[int, int]] = None,
+        crops_coords_top_left: Tuple[int, int] = (0, 0),
+        target_size: Optional[Tuple[int, int]] = None,
+        use_karras_sigmas: bool = False,
     ):
-
         # 0. Default height and width to unet
         height = height or self.default_sample_size * self.vae_scale_factor
         width = width or self.default_sample_size * self.vae_scale_factor
@@ -137,7 +147,9 @@ class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
 
         # 3. Encode input prompt
         text_encoder_lora_scale = (
-            cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None
+            cross_attention_kwargs.get("scale", None)
+            if cross_attention_kwargs is not None
+            else None
         )
         (
             prompt_embeds,
@@ -188,32 +200,47 @@ class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
 
         if do_classifier_free_guidance:
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds], dim=0)
-            add_text_embeds = torch.cat([negative_pooled_prompt_embeds, add_text_embeds], dim=0)
+            add_text_embeds = torch.cat(
+                [negative_pooled_prompt_embeds, add_text_embeds], dim=0
+            )
             add_time_ids = torch.cat([add_time_ids, add_time_ids], dim=0)
 
         prompt_embeds = prompt_embeds.to(device)
         add_text_embeds = add_text_embeds.to(device)
-        add_time_ids = add_time_ids.to(device).repeat(batch_size * num_images_per_prompt, 1)
+        add_time_ids = add_time_ids.to(device).repeat(
+            batch_size * num_images_per_prompt, 1
+        )
 
         # 8. Denoising loop
-        num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
+        num_warmup_steps = max(
+            len(timesteps) - num_inference_steps * self.scheduler.order, 0
+        )
 
         # 7.1 Apply denoising_end
-        if denoising_end is not None and type(denoising_end) == float and denoising_end > 0 and denoising_end < 1:
+        if (
+            denoising_end is not None
+            and type(denoising_end) == float
+            and denoising_end > 0
+            and denoising_end < 1
+        ):
             discrete_timestep_cutoff = int(
                 round(
                     self.scheduler.config.num_train_timesteps
                     - (denoising_end * self.scheduler.config.num_train_timesteps)
                 )
             )
-            num_inference_steps = len(list(filter(lambda ts: ts >= discrete_timestep_cutoff, timesteps)))
+            num_inference_steps = len(
+                list(filter(lambda ts: ts >= discrete_timestep_cutoff, timesteps))
+            )
             timesteps = timesteps[:num_inference_steps]
 
         # 5. Prepare sigmas
         if use_karras_sigmas:
             sigma_min: float = self.k_diffusion_model.sigmas[0].item()
             sigma_max: float = self.k_diffusion_model.sigmas[-1].item()
-            sigmas = get_sigmas_karras(n=num_inference_steps, sigma_min=sigma_min, sigma_max=sigma_max)
+            sigmas = get_sigmas_karras(
+                n=num_inference_steps, sigma_min=sigma_min, sigma_max=sigma_max
+            )
             sigmas = sigmas.to(device)
         else:
             sigmas = self.scheduler.sigmas
@@ -234,14 +261,19 @@ class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
 
         latents = latents * sigmas[0]
         self.k_diffusion_model.sigmas = self.k_diffusion_model.sigmas.to(latents.device)
-        self.k_diffusion_model.log_sigmas = self.k_diffusion_model.log_sigmas.to(latents.device)
+        self.k_diffusion_model.log_sigmas = self.k_diffusion_model.log_sigmas.to(
+            latents.device
+        )
 
         # 7. Define model function
         def model_fn(x, t):
             latent_model_input = torch.cat([x] * 2)
             t = torch.cat([t] * 2)
 
-            added_cond_kwargs = {"text_embeds": add_text_embeds, "time_ids": add_time_ids}
+            added_cond_kwargs = {
+                "text_embeds": add_text_embeds,
+                "time_ids": add_time_ids,
+            }
             # noise_pred = self.unet(
             #     latent_model_input,
             #     t,
@@ -257,29 +289,36 @@ class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
                 encoder_hidden_states=prompt_embeds,
                 cross_attention_kwargs=cross_attention_kwargs,
                 added_cond_kwargs=added_cond_kwargs,
-                return_dict=False,)[0]
+                return_dict=False,
+            )[0]
 
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-            noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+            noise_pred = noise_pred_uncond + guidance_scale * (
+                noise_pred_text - noise_pred_uncond
+            )
             return noise_pred
-
 
         # 8. Run k-diffusion solver
         sampler_kwargs = {}
         # should work without it
         noise_sampler_seed = None
 
-
         if "noise_sampler" in inspect.signature(self.sampler).parameters:
             min_sigma, max_sigma = sigmas[sigmas > 0].min(), sigmas.max()
-            noise_sampler = BrownianTreeNoiseSampler(latents, min_sigma, max_sigma, noise_sampler_seed)
+            noise_sampler = BrownianTreeNoiseSampler(
+                latents, min_sigma, max_sigma, noise_sampler_seed
+            )
             sampler_kwargs["noise_sampler"] = noise_sampler
 
         latents = self.sampler(model_fn, latents, sigmas, **sampler_kwargs)
 
         if not output_type == "latent":
-            image = self.vae.decode(latents / self.vae.config.scaling_factor, return_dict=False)[0]
-            image, has_nsfw_concept = self.run_safety_checker(image, device, prompt_embeds.dtype)
+            image = self.vae.decode(
+                latents / self.vae.config.scaling_factor, return_dict=False
+            )[0]
+            image, has_nsfw_concept = self.run_safety_checker(
+                image, device, prompt_embeds.dtype
+            )
         else:
             image = latents
             has_nsfw_concept = None
@@ -289,7 +328,9 @@ class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
         else:
             do_denormalize = [not has_nsfw for has_nsfw in has_nsfw_concept]
 
-        image = self.image_processor.postprocess(image, output_type=output_type, do_denormalize=do_denormalize)
+        image = self.image_processor.postprocess(
+            image, output_type=output_type, do_denormalize=do_denormalize
+        )
 
         # Offload last model to CPU
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
@@ -302,27 +343,26 @@ class StableDiffusionKDiffusionXLPipeline(StableDiffusionXLPipeline):
 
 
 class CustomStableDiffusionXLPipeline(StableDiffusionXLPipeline):
-
     def predict_noise(
-            self,
-            prompt: Union[str, List[str]] = None,
-            prompt_2: Optional[Union[str, List[str]]] = None,
-            num_inference_steps: int = 50,
-            guidance_scale: float = 5.0,
-            negative_prompt: Optional[Union[str, List[str]]] = None,
-            negative_prompt_2: Optional[Union[str, List[str]]] = None,
-            num_images_per_prompt: Optional[int] = 1,
-            eta: float = 0.0,
-            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-            latents: Optional[torch.FloatTensor] = None,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            cross_attention_kwargs: Optional[Dict[str, Any]] = None,
-            guidance_rescale: float = 0.0,
-            crops_coords_top_left: Tuple[int, int] = (0, 0),
-            timestep: Optional[int] = None,
+        self,
+        prompt: Union[str, List[str]] = None,
+        prompt_2: Optional[Union[str, List[str]]] = None,
+        num_inference_steps: int = 50,
+        guidance_scale: float = 5.0,
+        negative_prompt: Optional[Union[str, List[str]]] = None,
+        negative_prompt_2: Optional[Union[str, List[str]]] = None,
+        num_images_per_prompt: Optional[int] = 1,
+        eta: float = 0.0,
+        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+        latents: Optional[torch.FloatTensor] = None,
+        prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+        pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        cross_attention_kwargs: Optional[Dict[str, Any]] = None,
+        guidance_rescale: float = 0.0,
+        crops_coords_top_left: Tuple[int, int] = (0, 0),
+        timestep: Optional[int] = None,
     ):
         r"""
         Function invoked when calling the pipeline for generation.
@@ -485,7 +525,9 @@ class CustomStableDiffusionXLPipeline(StableDiffusionXLPipeline):
 
         # 3. Encode input prompt
         text_encoder_lora_scale = (
-            cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None
+            cross_attention_kwargs.get("scale", None)
+            if cross_attention_kwargs is not None
+            else None
         )
         (
             prompt_embeds,
@@ -531,16 +573,24 @@ class CustomStableDiffusionXLPipeline(StableDiffusionXLPipeline):
 
         if do_classifier_free_guidance:
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds], dim=0)
-            add_text_embeds = torch.cat([negative_pooled_prompt_embeds, add_text_embeds], dim=0)
+            add_text_embeds = torch.cat(
+                [negative_pooled_prompt_embeds, add_text_embeds], dim=0
+            )
             add_time_ids = torch.cat([add_time_ids, add_time_ids], dim=0)
 
         prompt_embeds = prompt_embeds.to(device)
         add_text_embeds = add_text_embeds.to(device)
-        add_time_ids = add_time_ids.to(device).repeat(batch_size * num_images_per_prompt, 1)
+        add_time_ids = add_time_ids.to(device).repeat(
+            batch_size * num_images_per_prompt, 1
+        )
 
-        latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+        latent_model_input = (
+            torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+        )
 
-        latent_model_input = self.scheduler.scale_model_input(latent_model_input, timestep)
+        latent_model_input = self.scheduler.scale_model_input(
+            latent_model_input, timestep
+        )
 
         # predict the noise residual
         added_cond_kwargs = {"text_embeds": add_text_embeds, "time_ids": add_time_ids}
@@ -556,51 +606,54 @@ class CustomStableDiffusionXLPipeline(StableDiffusionXLPipeline):
         # perform guidance
         if do_classifier_free_guidance:
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-            noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+            noise_pred = noise_pred_uncond + guidance_scale * (
+                noise_pred_text - noise_pred_uncond
+            )
 
         if do_classifier_free_guidance and guidance_rescale > 0.0:
             # Based on 3.4. in https://arxiv.org/pdf/2305.08891.pdf
-            noise_pred = rescale_noise_cfg(noise_pred, noise_pred_text, guidance_rescale=guidance_rescale)
+            noise_pred = rescale_noise_cfg(
+                noise_pred, noise_pred_text, guidance_rescale=guidance_rescale
+            )
 
         return noise_pred
 
     def enable_model_cpu_offload(self, gpu_id=0):
-        print('Called cpu offload', gpu_id)
+        print("Called cpu offload", gpu_id)
         # fuck off
         pass
 
 
 class CustomStableDiffusionPipeline(StableDiffusionPipeline):
-
     # replace the call so it matches SDXL call so we can use the same code and also stop early
     def __call__(
-            self,
-            prompt: Union[str, List[str]] = None,
-            prompt_2: Optional[Union[str, List[str]]] = None,
-            height: Optional[int] = None,
-            width: Optional[int] = None,
-            num_inference_steps: int = 50,
-            denoising_end: Optional[float] = None,
-            guidance_scale: float = 5.0,
-            negative_prompt: Optional[Union[str, List[str]]] = None,
-            negative_prompt_2: Optional[Union[str, List[str]]] = None,
-            num_images_per_prompt: Optional[int] = 1,
-            eta: float = 0.0,
-            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-            latents: Optional[torch.FloatTensor] = None,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            output_type: Optional[str] = "pil",
-            return_dict: bool = True,
-            callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
-            callback_steps: int = 1,
-            cross_attention_kwargs: Optional[Dict[str, Any]] = None,
-            guidance_rescale: float = 0.0,
-            original_size: Optional[Tuple[int, int]] = None,
-            crops_coords_top_left: Tuple[int, int] = (0, 0),
-            target_size: Optional[Tuple[int, int]] = None,
+        self,
+        prompt: Union[str, List[str]] = None,
+        prompt_2: Optional[Union[str, List[str]]] = None,
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        num_inference_steps: int = 50,
+        denoising_end: Optional[float] = None,
+        guidance_scale: float = 5.0,
+        negative_prompt: Optional[Union[str, List[str]]] = None,
+        negative_prompt_2: Optional[Union[str, List[str]]] = None,
+        num_images_per_prompt: Optional[int] = 1,
+        eta: float = 0.0,
+        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+        latents: Optional[torch.FloatTensor] = None,
+        prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+        pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        output_type: Optional[str] = "pil",
+        return_dict: bool = True,
+        callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+        callback_steps: int = 1,
+        cross_attention_kwargs: Optional[Dict[str, Any]] = None,
+        guidance_rescale: float = 0.0,
+        original_size: Optional[Tuple[int, int]] = None,
+        crops_coords_top_left: Tuple[int, int] = (0, 0),
+        target_size: Optional[Tuple[int, int]] = None,
     ):
         # 0. Default height and width to unet
         height = height or self.unet.config.sample_size * self.vae_scale_factor
@@ -608,7 +661,13 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
 
         # 1. Check inputs. Raise error if not correct
         self.check_inputs(
-            prompt, height, width, callback_steps, negative_prompt, prompt_embeds, negative_prompt_embeds
+            prompt,
+            height,
+            width,
+            callback_steps,
+            negative_prompt,
+            prompt_embeds,
+            negative_prompt_embeds,
         )
 
         # 2. Define call parameters
@@ -627,7 +686,9 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
 
         # 3. Encode input prompt
         text_encoder_lora_scale = (
-            cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None
+            cross_attention_kwargs.get("scale", None)
+            if cross_attention_kwargs is not None
+            else None
         )
         prompt_embeds = self._encode_prompt(
             prompt,
@@ -664,21 +725,32 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
         num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
 
         # 7.1 Apply denoising_end
-        if denoising_end is not None and type(denoising_end) == float and denoising_end > 0 and denoising_end < 1:
+        if (
+            denoising_end is not None
+            and type(denoising_end) == float
+            and denoising_end > 0
+            and denoising_end < 1
+        ):
             discrete_timestep_cutoff = int(
                 round(
                     self.scheduler.config.num_train_timesteps
                     - (denoising_end * self.scheduler.config.num_train_timesteps)
                 )
             )
-            num_inference_steps = len(list(filter(lambda ts: ts >= discrete_timestep_cutoff, timesteps)))
+            num_inference_steps = len(
+                list(filter(lambda ts: ts >= discrete_timestep_cutoff, timesteps))
+            )
             timesteps = timesteps[:num_inference_steps]
 
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
                 # expand the latents if we are doing classifier free guidance
-                latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-                latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
+                latent_model_input = (
+                    torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                )
+                latent_model_input = self.scheduler.scale_model_input(
+                    latent_model_input, t
+                )
 
                 # predict the noise residual
                 noise_pred = self.unet(
@@ -692,24 +764,36 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
                 # perform guidance
                 if do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                    noise_pred = noise_pred_uncond + guidance_scale * (
+                        noise_pred_text - noise_pred_uncond
+                    )
 
                 if do_classifier_free_guidance and guidance_rescale > 0.0:
                     # Based on 3.4. in https://arxiv.org/pdf/2305.08891.pdf
-                    noise_pred = rescale_noise_cfg(noise_pred, noise_pred_text, guidance_rescale=guidance_rescale)
+                    noise_pred = rescale_noise_cfg(
+                        noise_pred, noise_pred_text, guidance_rescale=guidance_rescale
+                    )
 
                 # compute the previous noisy sample x_t -> x_t-1
-                latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
+                latents = self.scheduler.step(
+                    noise_pred, t, latents, **extra_step_kwargs, return_dict=False
+                )[0]
 
                 # call the callback, if provided
-                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                if i == len(timesteps) - 1 or (
+                    (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
+                ):
                     progress_bar.update()
                     if callback is not None and i % callback_steps == 0:
                         callback(i, t, latents)
 
         if not output_type == "latent":
-            image = self.vae.decode(latents / self.vae.config.scaling_factor, return_dict=False)[0]
-            image, has_nsfw_concept = self.run_safety_checker(image, device, prompt_embeds.dtype)
+            image = self.vae.decode(
+                latents / self.vae.config.scaling_factor, return_dict=False
+            )[0]
+            image, has_nsfw_concept = self.run_safety_checker(
+                image, device, prompt_embeds.dtype
+            )
         else:
             image = latents
             has_nsfw_concept = None
@@ -719,7 +803,9 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
         else:
             do_denormalize = [not has_nsfw for has_nsfw in has_nsfw_concept]
 
-        image = self.image_processor.postprocess(image, output_type=output_type, do_denormalize=do_denormalize)
+        image = self.image_processor.postprocess(
+            image, output_type=output_type, do_denormalize=do_denormalize
+        )
 
         # Offload last model to CPU
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
@@ -728,31 +814,32 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
         if not return_dict:
             return (image, has_nsfw_concept)
 
-        return StableDiffusionPipelineOutput(images=image, nsfw_content_detected=has_nsfw_concept)
+        return StableDiffusionPipelineOutput(
+            images=image, nsfw_content_detected=has_nsfw_concept
+        )
 
     # some of the inputs are to keep it compatible with sdx
     def predict_noise(
-            self,
-            prompt: Union[str, List[str]] = None,
-            prompt_2: Optional[Union[str, List[str]]] = None,
-            num_inference_steps: int = 50,
-            guidance_scale: float = 5.0,
-            negative_prompt: Optional[Union[str, List[str]]] = None,
-            negative_prompt_2: Optional[Union[str, List[str]]] = None,
-            num_images_per_prompt: Optional[int] = 1,
-            eta: float = 0.0,
-            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-            latents: Optional[torch.FloatTensor] = None,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            cross_attention_kwargs: Optional[Dict[str, Any]] = None,
-            guidance_rescale: float = 0.0,
-            crops_coords_top_left: Tuple[int, int] = (0, 0),
-            timestep: Optional[int] = None,
+        self,
+        prompt: Union[str, List[str]] = None,
+        prompt_2: Optional[Union[str, List[str]]] = None,
+        num_inference_steps: int = 50,
+        guidance_scale: float = 5.0,
+        negative_prompt: Optional[Union[str, List[str]]] = None,
+        negative_prompt_2: Optional[Union[str, List[str]]] = None,
+        num_images_per_prompt: Optional[int] = 1,
+        eta: float = 0.0,
+        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+        latents: Optional[torch.FloatTensor] = None,
+        prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+        pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        cross_attention_kwargs: Optional[Dict[str, Any]] = None,
+        guidance_rescale: float = 0.0,
+        crops_coords_top_left: Tuple[int, int] = (0, 0),
+        timestep: Optional[int] = None,
     ):
-
         # 0. Default height and width to unet
         height = self.unet.config.sample_size * self.vae_scale_factor
         width = self.unet.config.sample_size * self.vae_scale_factor
@@ -773,7 +860,9 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
 
         # 3. Encode input prompt
         text_encoder_lora_scale = (
-            cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None
+            cross_attention_kwargs.get("scale", None)
+            if cross_attention_kwargs is not None
+            else None
         )
         prompt_embeds = self._encode_prompt(
             prompt,
@@ -803,8 +892,12 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
         )
 
         # expand the latents if we are doing classifier free guidance
-        latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-        latent_model_input = self.scheduler.scale_model_input(latent_model_input, timestep)
+        latent_model_input = (
+            torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+        )
+        latent_model_input = self.scheduler.scale_model_input(
+            latent_model_input, timestep
+        )
 
         # predict the noise residual
         noise_pred = self.unet(
@@ -818,51 +911,54 @@ class CustomStableDiffusionPipeline(StableDiffusionPipeline):
         # perform guidance
         if do_classifier_free_guidance:
             noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-            noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+            noise_pred = noise_pred_uncond + guidance_scale * (
+                noise_pred_text - noise_pred_uncond
+            )
 
         if do_classifier_free_guidance and guidance_rescale > 0.0:
             # Based on 3.4. in https://arxiv.org/pdf/2305.08891.pdf
-            noise_pred = rescale_noise_cfg(noise_pred, noise_pred_text, guidance_rescale=guidance_rescale)
+            noise_pred = rescale_noise_cfg(
+                noise_pred, noise_pred_text, guidance_rescale=guidance_rescale
+            )
 
         return noise_pred
 
 
 class StableDiffusionXLRefinerPipeline(StableDiffusionXLPipeline):
-
     @torch.no_grad()
     def __call__(
-            self,
-            prompt: Union[str, List[str]] = None,
-            prompt_2: Optional[Union[str, List[str]]] = None,
-            height: Optional[int] = None,
-            width: Optional[int] = None,
-            num_inference_steps: int = 50,
-            denoising_end: Optional[float] = None,
-            denoising_start: Optional[float] = None,
-            guidance_scale: float = 5.0,
-            negative_prompt: Optional[Union[str, List[str]]] = None,
-            negative_prompt_2: Optional[Union[str, List[str]]] = None,
-            num_images_per_prompt: Optional[int] = 1,
-            eta: float = 0.0,
-            generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-            latents: Optional[torch.FloatTensor] = None,
-            prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-            pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
-            output_type: Optional[str] = "pil",
-            return_dict: bool = True,
-            callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
-            callback_steps: int = 1,
-            cross_attention_kwargs: Optional[Dict[str, Any]] = None,
-            guidance_rescale: float = 0.0,
-            original_size: Optional[Tuple[int, int]] = None,
-            crops_coords_top_left: Tuple[int, int] = (0, 0),
-            target_size: Optional[Tuple[int, int]] = None,
-            negative_original_size: Optional[Tuple[int, int]] = None,
-            negative_crops_coords_top_left: Tuple[int, int] = (0, 0),
-            negative_target_size: Optional[Tuple[int, int]] = None,
-            clip_skip: Optional[int] = None,
+        self,
+        prompt: Union[str, List[str]] = None,
+        prompt_2: Optional[Union[str, List[str]]] = None,
+        height: Optional[int] = None,
+        width: Optional[int] = None,
+        num_inference_steps: int = 50,
+        denoising_end: Optional[float] = None,
+        denoising_start: Optional[float] = None,
+        guidance_scale: float = 5.0,
+        negative_prompt: Optional[Union[str, List[str]]] = None,
+        negative_prompt_2: Optional[Union[str, List[str]]] = None,
+        num_images_per_prompt: Optional[int] = 1,
+        eta: float = 0.0,
+        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
+        latents: Optional[torch.FloatTensor] = None,
+        prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_prompt_embeds: Optional[torch.FloatTensor] = None,
+        pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
+        output_type: Optional[str] = "pil",
+        return_dict: bool = True,
+        callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
+        callback_steps: int = 1,
+        cross_attention_kwargs: Optional[Dict[str, Any]] = None,
+        guidance_rescale: float = 0.0,
+        original_size: Optional[Tuple[int, int]] = None,
+        crops_coords_top_left: Tuple[int, int] = (0, 0),
+        target_size: Optional[Tuple[int, int]] = None,
+        negative_original_size: Optional[Tuple[int, int]] = None,
+        negative_crops_coords_top_left: Tuple[int, int] = (0, 0),
+        negative_target_size: Optional[Tuple[int, int]] = None,
+        clip_skip: Optional[int] = None,
     ):
         r"""
         Function invoked when calling the pipeline for generation.
@@ -1036,7 +1132,11 @@ class StableDiffusionXLRefinerPipeline(StableDiffusionXLPipeline):
         do_classifier_free_guidance = guidance_scale > 1.0
 
         # 3. Encode input prompt
-        lora_scale = cross_attention_kwargs.get("scale", None) if cross_attention_kwargs is not None else None
+        lora_scale = (
+            cross_attention_kwargs.get("scale", None)
+            if cross_attention_kwargs is not None
+            else None
+        )
 
         (
             prompt_embeds,
@@ -1107,48 +1207,76 @@ class StableDiffusionXLRefinerPipeline(StableDiffusionXLPipeline):
 
         if do_classifier_free_guidance:
             prompt_embeds = torch.cat([negative_prompt_embeds, prompt_embeds], dim=0)
-            add_text_embeds = torch.cat([negative_pooled_prompt_embeds, add_text_embeds], dim=0)
+            add_text_embeds = torch.cat(
+                [negative_pooled_prompt_embeds, add_text_embeds], dim=0
+            )
             add_time_ids = torch.cat([negative_add_time_ids, add_time_ids], dim=0)
 
         prompt_embeds = prompt_embeds.to(device)
         add_text_embeds = add_text_embeds.to(device)
-        add_time_ids = add_time_ids.to(device).repeat(batch_size * num_images_per_prompt, 1)
+        add_time_ids = add_time_ids.to(device).repeat(
+            batch_size * num_images_per_prompt, 1
+        )
 
         # 8. Denoising loop
-        num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
+        num_warmup_steps = max(
+            len(timesteps) - num_inference_steps * self.scheduler.order, 0
+        )
 
         # 8.1 Apply denoising_end
-        if denoising_end is not None and isinstance(denoising_end, float) and denoising_end > 0 and denoising_end < 1:
+        if (
+            denoising_end is not None
+            and isinstance(denoising_end, float)
+            and denoising_end > 0
+            and denoising_end < 1
+        ):
             discrete_timestep_cutoff = int(
                 round(
                     self.scheduler.config.num_train_timesteps
                     - (denoising_end * self.scheduler.config.num_train_timesteps)
                 )
             )
-            num_inference_steps = len(list(filter(lambda ts: ts >= discrete_timestep_cutoff, timesteps)))
+            num_inference_steps = len(
+                list(filter(lambda ts: ts >= discrete_timestep_cutoff, timesteps))
+            )
             timesteps = timesteps[:num_inference_steps]
 
         # 8.2 Determine denoising_start
         denoising_start_index = 0
-        if denoising_start is not None and isinstance(denoising_start, float) and denoising_start > 0 and denoising_start < 1:
+        if (
+            denoising_start is not None
+            and isinstance(denoising_start, float)
+            and denoising_start > 0
+            and denoising_start < 1
+        ):
             discrete_timestep_start = int(
                 round(
                     self.scheduler.config.num_train_timesteps
                     - (denoising_start * self.scheduler.config.num_train_timesteps)
                 )
             )
-            denoising_start_index = len(list(filter(lambda ts: ts < discrete_timestep_start, timesteps)))
+            denoising_start_index = len(
+                list(filter(lambda ts: ts < discrete_timestep_start, timesteps))
+            )
 
-
-        with self.progress_bar(total=num_inference_steps - denoising_start_index) as progress_bar:
+        with self.progress_bar(
+            total=num_inference_steps - denoising_start_index
+        ) as progress_bar:
             for i, t in enumerate(timesteps, start=denoising_start_index):
                 # expand the latents if we are doing classifier free guidance
-                latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                latent_model_input = (
+                    torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+                )
 
-                latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
+                latent_model_input = self.scheduler.scale_model_input(
+                    latent_model_input, t
+                )
 
                 # predict the noise residual
-                added_cond_kwargs = {"text_embeds": add_text_embeds, "time_ids": add_time_ids}
+                added_cond_kwargs = {
+                    "text_embeds": add_text_embeds,
+                    "time_ids": add_time_ids,
+                }
                 noise_pred = self.unet(
                     latent_model_input,
                     t,
@@ -1161,17 +1289,25 @@ class StableDiffusionXLRefinerPipeline(StableDiffusionXLPipeline):
                 # perform guidance
                 if do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                    noise_pred = noise_pred_uncond + guidance_scale * (
+                        noise_pred_text - noise_pred_uncond
+                    )
 
                 if do_classifier_free_guidance and guidance_rescale > 0.0:
                     # Based on 3.4. in https://arxiv.org/pdf/2305.08891.pdf
-                    noise_pred = rescale_noise_cfg(noise_pred, noise_pred_text, guidance_rescale=guidance_rescale)
+                    noise_pred = rescale_noise_cfg(
+                        noise_pred, noise_pred_text, guidance_rescale=guidance_rescale
+                    )
 
                 # compute the previous noisy sample x_t -> x_t-1
-                latents = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs, return_dict=False)[0]
+                latents = self.scheduler.step(
+                    noise_pred, t, latents, **extra_step_kwargs, return_dict=False
+                )[0]
 
                 # call the callback, if provided
-                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                if i == len(timesteps) - 1 or (
+                    (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
+                ):
                     progress_bar.update()
                     if callback is not None and i % callback_steps == 0:
                         step_idx = i // getattr(self.scheduler, "order", 1)
@@ -1182,13 +1318,19 @@ class StableDiffusionXLRefinerPipeline(StableDiffusionXLPipeline):
 
         if not output_type == "latent":
             # make sure the VAE is in float32 mode, as it overflows in float16
-            needs_upcasting = self.vae.dtype == torch.float16 and self.vae.config.force_upcast
+            needs_upcasting = (
+                self.vae.dtype == torch.float16 and self.vae.config.force_upcast
+            )
 
             if needs_upcasting:
                 self.upcast_vae()
-                latents = latents.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
+                latents = latents.to(
+                    next(iter(self.vae.post_quant_conv.parameters())).dtype
+                )
 
-            image = self.vae.decode(latents / self.vae.config.scaling_factor, return_dict=False)[0]
+            image = self.vae.decode(
+                latents / self.vae.config.scaling_factor, return_dict=False
+            )[0]
 
             # cast back to fp16 if needed
             if needs_upcasting:
@@ -1210,8 +1352,6 @@ class StableDiffusionXLRefinerPipeline(StableDiffusionXLPipeline):
             return (image,)
 
         return StableDiffusionXLPipelineOutput(images=image)
-
-
 
 
 # TODO this is rough. Need to properly stack unconditional
@@ -1274,7 +1414,9 @@ class FluxWithCFGPipeline(FluxPipeline):
         device = self._execution_device
 
         lora_scale = (
-            self.joint_attention_kwargs.get("scale", None) if self.joint_attention_kwargs is not None else None
+            self.joint_attention_kwargs.get("scale", None)
+            if self.joint_attention_kwargs is not None
+            else None
         )
         (
             prompt_embeds,
@@ -1337,7 +1479,9 @@ class FluxWithCFGPipeline(FluxPipeline):
             sigmas,
             mu=mu,
         )
-        num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
+        num_warmup_steps = max(
+            len(timesteps) - num_inference_steps * self.scheduler.order, 0
+        )
         self._num_timesteps = len(timesteps)
 
         # 6. Denoising loop
@@ -1367,7 +1511,7 @@ class FluxWithCFGPipeline(FluxPipeline):
                     joint_attention_kwargs=self.joint_attention_kwargs,
                     return_dict=False,
                 )[0]
-                
+
                 if guidance_scale > 1.00001:
                     # todo combine these
                     noise_pred_uncond = self.transformer(
@@ -1382,14 +1526,18 @@ class FluxWithCFGPipeline(FluxPipeline):
                         return_dict=False,
                     )[0]
 
-                    noise_pred = noise_pred_uncond + self.guidance_scale * (noise_pred_text - noise_pred_uncond)
-                
+                    noise_pred = noise_pred_uncond + self.guidance_scale * (
+                        noise_pred_text - noise_pred_uncond
+                    )
+
                 else:
                     noise_pred = noise_pred_text
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents_dtype = latents.dtype
-                latents = self.scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+                latents = self.scheduler.step(
+                    noise_pred, t, latents, return_dict=False
+                )[0]
 
                 if latents.dtype != latents_dtype:
                     if torch.backends.mps.is_available():
@@ -1406,7 +1554,9 @@ class FluxWithCFGPipeline(FluxPipeline):
                     prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
 
                 # call the callback, if provided
-                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                if i == len(timesteps) - 1 or (
+                    (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
+                ):
                     progress_bar.update()
 
                 if XLA_AVAILABLE:
@@ -1416,8 +1566,12 @@ class FluxWithCFGPipeline(FluxPipeline):
             image = latents
 
         else:
-            latents = self._unpack_latents(latents, height, width, self.vae_scale_factor)
-            latents = (latents / self.vae.config.scaling_factor) + self.vae.config.shift_factor
+            latents = self._unpack_latents(
+                latents, height, width, self.vae_scale_factor
+            )
+            latents = (
+                latents / self.vae.config.scaling_factor
+            ) + self.vae.config.shift_factor
             image = self.vae.decode(latents, return_dict=False)[0]
             image = self.image_processor.postprocess(image, output_type=output_type)
 
@@ -1429,8 +1583,8 @@ class FluxWithCFGPipeline(FluxPipeline):
             return (image,)
 
         return FluxPipelineOutput(images=image)
-    
-    
+
+
 class FluxAdvancedControlPipeline(FluxControlPipeline):
     def __init__(
         self,
@@ -1446,8 +1600,16 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
     ):
         self.do_inpainting = do_inpainting
         self.num_controls = num_controls
-        super().__init__(scheduler, vae, text_encoder, tokenizer, text_encoder_2, tokenizer_2, transformer)
-    
+        super().__init__(
+            scheduler,
+            vae,
+            text_encoder,
+            tokenizer,
+            text_encoder_2,
+            tokenizer_2,
+            transformer,
+        )
+
     @torch.no_grad()
     def __call__(
         self,
@@ -1581,7 +1743,9 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
 
         # 3. Prepare text embeddings
         lora_scale = (
-            self.joint_attention_kwargs.get("scale", None) if self.joint_attention_kwargs is not None else None
+            self.joint_attention_kwargs.get("scale", None)
+            if self.joint_attention_kwargs is not None
+            else None
         )
         (
             prompt_embeds,
@@ -1601,10 +1765,14 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
         # 4. Prepare latent variables
         # num_channels_latents = self.transformer.config.in_channels // 8
         num_channels_latents = 128 // 8
-        
+
         # pull mask off control image if there is one it is a pil image
         mask = None
-        if control_image is not None and self.do_inpainting and control_image.mode == "RGBA":
+        if (
+            control_image is not None
+            and self.do_inpainting
+            and control_image.mode == "RGBA"
+        ):
             control_img_array = np.array(control_image)
             mask = control_img_array[:, :, 3:4]
             # scale it to 0 - 1
@@ -1625,16 +1793,29 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
 
         if control_image.ndim == 4:
             num_control_channels = num_channels_latents
-            control_image = self.vae.encode(control_image).latent_dist.sample(generator=generator)
-            control_image = (control_image - self.vae.config.shift_factor) * self.vae.config.scaling_factor
-            
+            control_image = self.vae.encode(control_image).latent_dist.sample(
+                generator=generator
+            )
+            control_image = (
+                control_image - self.vae.config.shift_factor
+            ) * self.vae.config.scaling_factor
+
             if mask is not None:
-                transform = transforms.Compose([
-                    transforms.ToTensor(),
-                ])
-                mask = transform(mask).to(device, dtype=control_image.dtype).unsqueeze(0)
+                transform = transforms.Compose(
+                    [
+                        transforms.ToTensor(),
+                    ]
+                )
+                mask = (
+                    transform(mask).to(device, dtype=control_image.dtype).unsqueeze(0)
+                )
                 # resize mask to match control image
-                mask = F.interpolate(mask, size=(control_image.shape[2], control_image.shape[3]), mode="bilinear", align_corners=False)
+                mask = F.interpolate(
+                    mask,
+                    size=(control_image.shape[2], control_image.shape[3]),
+                    mode="bilinear",
+                    align_corners=False,
+                )
                 mask = mask.to(device)
                 # apply the mask to the control image so the inpaint latent area is 0
                 # mask is currently 0 for inpaint area and 1 for image area
@@ -1665,7 +1846,11 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
         )
 
         # 5. Prepare timesteps
-        sigmas = np.linspace(1.0, 1 / num_inference_steps, num_inference_steps) if sigmas is None else sigmas
+        sigmas = (
+            np.linspace(1.0, 1 / num_inference_steps, num_inference_steps)
+            if sigmas is None
+            else sigmas
+        )
         image_seq_len = latents.shape[1]
         mu = calculate_shift(
             image_seq_len,
@@ -1681,12 +1866,16 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
             sigmas=sigmas,
             mu=mu,
         )
-        num_warmup_steps = max(len(timesteps) - num_inference_steps * self.scheduler.order, 0)
+        num_warmup_steps = max(
+            len(timesteps) - num_inference_steps * self.scheduler.order, 0
+        )
         self._num_timesteps = len(timesteps)
 
         # handle guidance
         if self.transformer.config.guidance_embeds:
-            guidance = torch.full([1], guidance_scale, device=device, dtype=torch.float32)
+            guidance = torch.full(
+                [1], guidance_scale, device=device, dtype=torch.float32
+            )
             guidance = guidance.expand(latents.shape[0])
         else:
             guidance = None
@@ -1696,7 +1885,7 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
             for i, t in enumerate(timesteps):
                 if self.interrupt:
                     continue
-                
+
                 control_image_list = []
                 for idx in range(self.num_controls):
                     if idx == 0 and self.do_inpainting:
@@ -1706,7 +1895,7 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
                         control_image_list.append(ctrl)
                     else:
                         control_image_list.append(torch.zeros_like(latents))
-                
+
                 control_image_list[control_image_idx] = control_image
 
                 latent_model_input = torch.cat([latents] + control_image_list, dim=2)
@@ -1728,7 +1917,9 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents_dtype = latents.dtype
-                latents = self.scheduler.step(noise_pred, t, latents, return_dict=False)[0]
+                latents = self.scheduler.step(
+                    noise_pred, t, latents, return_dict=False
+                )[0]
 
                 if latents.dtype != latents_dtype:
                     if torch.backends.mps.is_available():
@@ -1745,7 +1936,9 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
                     prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
 
                 # call the callback, if provided
-                if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):
+                if i == len(timesteps) - 1 or (
+                    (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
+                ):
                     progress_bar.update()
 
                 if XLA_AVAILABLE:
@@ -1754,8 +1947,12 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
         if output_type == "latent":
             image = latents
         else:
-            latents = self._unpack_latents(latents, height, width, self.vae_scale_factor)
-            latents = (latents / self.vae.config.scaling_factor) + self.vae.config.shift_factor
+            latents = self._unpack_latents(
+                latents, height, width, self.vae_scale_factor
+            )
+            latents = (
+                latents / self.vae.config.scaling_factor
+            ) + self.vae.config.shift_factor
             image = self.vae.decode(latents, return_dict=False)[0]
             image = self.image_processor.postprocess(image, output_type=output_type)
 
@@ -1767,4 +1964,3 @@ class FluxAdvancedControlPipeline(FluxControlPipeline):
 
         return FluxPipelineOutput(images=image)
 
-    

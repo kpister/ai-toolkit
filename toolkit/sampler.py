@@ -18,9 +18,11 @@ from diffusers import (
 )
 from toolkit.samplers.mean_flow_scheduler import MeanFlowScheduler
 
-from toolkit.samplers.custom_flowmatch_sampler import CustomFlowMatchEulerDiscreteScheduler
+from toolkit.samplers.custom_flowmatch_sampler import (
+    CustomFlowMatchEulerDiscreteScheduler,
+)
 
-from k_diffusion.external import CompVisDenoiser
+# from k_diffusion.external import CompVisDenoiser
 
 from toolkit.samplers.custom_lcm_scheduler import CustomLCMScheduler
 
@@ -48,87 +50,85 @@ sd_config = {
     "steps_offset": 0,
     # "timestep_spacing": "trailing", # for training
     "timestep_spacing": "leading",
-    "trained_betas": None
+    "trained_betas": None,
 }
 
 pixart_config = {
-  "_class_name": "DPMSolverMultistepScheduler",
-  "_diffusers_version": "0.22.0.dev0",
-  "algorithm_type": "dpmsolver++",
-  "beta_end": 0.02,
-  "beta_schedule": "linear",
-  "beta_start": 0.0001,
-  "dynamic_thresholding_ratio": 0.995,
-  "euler_at_final": False,
-  # "lambda_min_clipped": -Infinity,
-  "lambda_min_clipped": -math.inf,
-  "lower_order_final": True,
-  "num_train_timesteps": 1000,
-  "prediction_type": "epsilon",
-  "sample_max_value": 1.0,
-  "solver_order": 2,
-  "solver_type": "midpoint",
-  "steps_offset": 0,
-  "thresholding": False,
-  "timestep_spacing": "linspace",
-  "trained_betas": None,
-  "use_karras_sigmas": False,
-  "use_lu_lambdas": False,
-  "variance_type": None
+    "_class_name": "DPMSolverMultistepScheduler",
+    "_diffusers_version": "0.22.0.dev0",
+    "algorithm_type": "dpmsolver++",
+    "beta_end": 0.02,
+    "beta_schedule": "linear",
+    "beta_start": 0.0001,
+    "dynamic_thresholding_ratio": 0.995,
+    "euler_at_final": False,
+    # "lambda_min_clipped": -Infinity,
+    "lambda_min_clipped": -math.inf,
+    "lower_order_final": True,
+    "num_train_timesteps": 1000,
+    "prediction_type": "epsilon",
+    "sample_max_value": 1.0,
+    "solver_order": 2,
+    "solver_type": "midpoint",
+    "steps_offset": 0,
+    "thresholding": False,
+    "timestep_spacing": "linspace",
+    "trained_betas": None,
+    "use_karras_sigmas": False,
+    "use_lu_lambdas": False,
+    "variance_type": None,
 }
 
 flux_config = {
-  "_class_name": "FlowMatchEulerDiscreteScheduler",
-  "_diffusers_version": "0.30.0.dev0",
-  "base_image_seq_len": 256,
-  "base_shift": 0.5,
-  "max_image_seq_len": 4096,
-  "max_shift": 1.15,
-  "num_train_timesteps": 1000,
-  "shift": 3.0,
-  "use_dynamic_shifting": True
+    "_class_name": "FlowMatchEulerDiscreteScheduler",
+    "_diffusers_version": "0.30.0.dev0",
+    "base_image_seq_len": 256,
+    "base_shift": 0.5,
+    "max_image_seq_len": 4096,
+    "max_shift": 1.15,
+    "num_train_timesteps": 1000,
+    "shift": 3.0,
+    "use_dynamic_shifting": True,
 }
 
 sd_flow_config = {
-  "_class_name": "FlowMatchEulerDiscreteScheduler",
-  "_diffusers_version": "0.30.0.dev0",
-  "base_image_seq_len": 256,
-  "base_shift": 0.5,
-  "max_image_seq_len": 4096,
-  "max_shift": 1.15,
-  "num_train_timesteps": 1000,
-  "shift": 3.0,
-  "use_dynamic_shifting": False
+    "_class_name": "FlowMatchEulerDiscreteScheduler",
+    "_diffusers_version": "0.30.0.dev0",
+    "base_image_seq_len": 256,
+    "base_shift": 0.5,
+    "max_image_seq_len": 4096,
+    "max_shift": 1.15,
+    "num_train_timesteps": 1000,
+    "shift": 3.0,
+    "use_dynamic_shifting": False,
 }
 
 lumina2_config = {
-  "_class_name": "FlowMatchEulerDiscreteScheduler",
-  "_diffusers_version": "0.33.0.dev0",
-  "base_image_seq_len": 256,
-  "base_shift": 0.5,
-  "invert_sigmas": False,
-  "max_image_seq_len": 4096,
-  "max_shift": 1.15,
-  "num_train_timesteps": 1000,
-  "shift": 6.0,
-  "shift_terminal": None,
-  "use_beta_sigmas": False,
-  "use_dynamic_shifting": False,
-  "use_exponential_sigmas": False,
-  "use_karras_sigmas": False
+    "_class_name": "FlowMatchEulerDiscreteScheduler",
+    "_diffusers_version": "0.33.0.dev0",
+    "base_image_seq_len": 256,
+    "base_shift": 0.5,
+    "invert_sigmas": False,
+    "max_image_seq_len": 4096,
+    "max_shift": 1.15,
+    "num_train_timesteps": 1000,
+    "shift": 6.0,
+    "shift_terminal": None,
+    "use_beta_sigmas": False,
+    "use_dynamic_shifting": False,
+    "use_exponential_sigmas": False,
+    "use_karras_sigmas": False,
 }
 
 
-def get_sampler(
-        sampler: str,
-        kwargs: dict = None,
-        arch: str = "sd"
-):
+def get_sampler(sampler: str, kwargs: dict = None, arch: str = "sd"):
     sched_init_args = {}
     if kwargs is not None:
         sched_init_args.update(kwargs)
 
-    config_to_use = copy.deepcopy(sd_config) if arch == "sd" else copy.deepcopy(pixart_config)
+    config_to_use = (
+        copy.deepcopy(sd_config) if arch == "sd" else copy.deepcopy(pixart_config)
+    )
 
     if sampler.startswith("k_"):
         sched_init_args["use_karras_sigmas"] = True
@@ -145,7 +145,12 @@ def get_sampler(
         scheduler_cls = EulerDiscreteScheduler
     elif sampler == "euler_a":
         scheduler_cls = EulerAncestralDiscreteScheduler
-    elif sampler == "dpmsolver" or sampler == "dpmsolver++" or sampler == "k_dpmsolver" or sampler == "k_dpmsolver++":
+    elif (
+        sampler == "dpmsolver"
+        or sampler == "dpmsolver++"
+        or sampler == "k_dpmsolver"
+        or sampler == "k_dpmsolver++"
+    ):
         scheduler_cls = DPMSolverMultistepScheduler
         sched_init_args["algorithm_type"] = sampler.replace("k_", "")
     elif sampler == "dpmsingle":
@@ -178,7 +183,6 @@ def get_sampler(
     else:
         raise ValueError(f"Sampler {sampler} not supported")
 
-
     config = copy.deepcopy(config_to_use)
     config.update(sched_init_args)
 
@@ -197,12 +201,16 @@ if __name__ == "__main__":
 
     inference_steps = 25
 
-    pipe = StableDiffusionKDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-1-base")
+    pipe = StableDiffusionKDiffusionPipeline.from_pretrained(
+        "stabilityai/stable-diffusion-2-1-base"
+    )
     pipe = pipe.to("cuda")
 
-    k_diffusion_model = CompVisDenoiser(model)
+    # k_diffusion_model = CompVisDenoiser(model)
 
-    pipe = DiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", custom_pipeline="sd_text2img_k_diffusion")
+    pipe = DiffusionPipeline.from_pretrained(
+        "CompVis/stable-diffusion-v1-4", custom_pipeline="sd_text2img_k_diffusion"
+    )
     pipe = pipe.to("cuda")
 
     prompt = "an astronaut riding a horse on mars"

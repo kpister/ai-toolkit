@@ -17,7 +17,7 @@ data_volume = modal.Volume.from_name("qwen-data", create_if_missing=True)
 
 # modal_output, due to "cannot mount volume on non-empty path" requirement
 MOUNT_DIR = "/root/ai-toolkit/modal_output"  # modal_output, due to "cannot mount volume on non-empty path" requirement
-GPU = "B200"
+GPU = "H200"
 
 # define modal app
 image = (
@@ -27,8 +27,8 @@ image = (
     .pip_install(
         "torch==2.8",
         "torchvision==0.23.0",
-        # index_url="https://download.pytorch.org/whl/cu128",
-        # gpu=GPU,
+        index_url="https://download.pytorch.org/whl/cu128",
+        gpu=GPU,
     )
     .pip_install(
         "python-dotenv",
@@ -76,7 +76,7 @@ image = (
 
 # create the Modal app with the necessary mounts and volumes
 app = modal.App(
-    name="qwen-lora-training",
+    name="qwen-lora-training-h200",
     image=image,
     # mounts=[code_mount],
     volumes={MOUNT_DIR: model_volume, "/qwen-data": data_volume},

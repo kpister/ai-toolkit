@@ -13,7 +13,10 @@ import modal
 # define the volume for storing model outputs, using "creating volumes lazily": https://modal.com/docs/guide/volumes
 # you will find your model, samples and optimizer stored in: https://modal.com/storage/your-username/main/flux-lora-models
 model_volume = modal.Volume.from_name("flux-lora-models", create_if_missing=True)
+# data_volume = modal.Volume.from_name("qwenv1.4", create_if_missing=True)
 data_volume = modal.Volume.from_name("qwen-data", create_if_missing=True)
+# data_volume = modal.Volume.from_name("qwen-data-rugs", create_if_missing=True)
+# data_volume = modal.Volume.from_name("rug-data", create_if_missing=True)
 
 # modal_output, due to "cannot mount volume on non-empty path" requirement
 MOUNT_DIR = "/root/ai-toolkit/modal_output"  # modal_output, due to "cannot mount volume on non-empty path" requirement
@@ -105,15 +108,16 @@ def print_end_message(jobs_completed, jobs_failed):
 
 @app.function(
     gpu=GPU,
-    timeout=7200 * 2,  # 4 hours, increase or decrease if needed
-    cpu=16,
-    memory=164 * 1024,  # 128GB RAM
+    timeout=7200 * 8,  # 4 hours, increase or decrease if needed
+    cpu=8,
+    memory=80 * 1024,  # 128GB RAM
 )
 def main(name: str | None = None):
     from toolkit.job import get_job
 
     # convert the config file list from a string to a list
-    config_file = "config/examples/train_lora_qwen_image_edit_32gb.yaml"
+    # config_file = "config/examples/train_lora_qwen_image_edit_32gb.yaml"
+    config_file = "config/train_indoor.yaml"
 
     jobs_completed = 0
     jobs_failed = 0

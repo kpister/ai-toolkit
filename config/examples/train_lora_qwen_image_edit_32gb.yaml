@@ -2,7 +2,7 @@
 job: extension
 config:
   # this name will be the folder and filename name
-  name: "qwen_image_edit_lora_v1.2"
+  name: "qwen_insert_v2.0"
   process:
     - type: "sd_trainer"
       # root folder to save training sessions/samples/weights
@@ -16,11 +16,11 @@ config:
       #      trigger_word: "p3r5on"
       network:
         type: "lora"
-        linear: 16
+        linear: 32
         linear_alpha: 16
       save:
         dtype: float16 # precision to save
-        save_every: 250 # save every this many steps
+        save_every: 200 # save every this many steps
         max_step_saves_to_keep: 4 # how many intermittent saves to keep
       datasets:
         # datasets are a folder of images. captions need to be txt files with the same name as the image
@@ -37,14 +37,25 @@ config:
           # Adaptive batch sizing - scales batch size based on resolution to maintain consistent memory usage
           adaptive_batch_size: true # enable adaptive batch sizing
           base_resolution: 512 # reference resolution for batch_size setting (512x512 will use full batch_size)
-          num_workers: 32
+          num_workers: 8
           prefetch_factor: 2
+        # - folder_path: "/qwen-data/images"
+        #   control_path: "/qwen-data/silos"
+        #   caption_ext: "txt"
+        #   # default_caption: "a person" # if caching text embeddings, if you don't have captions, this will get cached
+        #   caption_dropout_rate: 0.05 # will drop out the caption 5% of time
+        #   resolution: [512, 768, 1024, 1344, 1600, 2048] # qwen image enjoys multiple resolutions
+        #   # Adaptive batch sizing - scales batch size based on resolution to maintain consistent memory usage
+        #   adaptive_batch_size: true # enable adaptive batch sizing
+        #   base_resolution: 512 # reference resolution for batch_size setting (512x512 will use full batch_size)
+        #   num_workers: 16
+        #   prefetch_factor: 2
       train:
         batch_size: 32
         # caching text embeddings is required for 32GB
         cache_text_embeddings: true
 
-        steps: 3000 # total number of steps to train 500 - 4000 is a good range
+        steps: 4000 # total number of steps to train 500 - 4000 is a good range
         gradient_accumulation: 1
         timestep_type: "weighted"
         train_unet: true
@@ -72,7 +83,7 @@ config:
         low_vram: false
       sample:
         sampler: "flowmatch" # must match train.noise_scheduler
-        sample_every: 50 # sample every this many steps
+        sample_every: 100 # sample every this many steps
         width: 1600
         height: 1600
         neg: ""
@@ -83,8 +94,18 @@ config:
         samples:
           - prompt: "<ALL3D> A photograph of a modern light gray three-drawer dresser in a bedroom, featuring round knobs and tapered legs with a metal cross-stretcher, set on a wood floor beside a white upholstered bed.\ndresser, modern furniture, light gray finish, three drawers, round knobs, tapered legs, metal cross-stretcher base, clean lines, on top: ribbed ceramic vase, two yellow vases, setting: bedroom, white upholstered bed, wood floor, off-white wall, baseboard trim, cream patterned rug, composition: medium shot, eye-level view, product photography, style: clean, minimalist, warm, natural lighting, soft shadows"
             ctrl_img: "/qwen-data/silos/308213320.png"
-          - prompt: "<ALL3D> A photograph of a modern brushed brass adjustable floor lamp with a conical metal shade and square base, positioned beside a white upholstered sofa on a natural fiber rug in a living room.\nfloor lamp, modern lighting, brushed brass, adjustable arm, pivot joints, conical metal shade, square base, slim profile, adjacent: white upholstered sofa, yellow throw pillow, setting: living room, off-white wall, left window with white trim, light wood floor, natural fiber rug, baseboard molding, composition: medium shot, eye-level view, product photography, style: clean, minimalist, warm, natural lighting, soft shadows"
-            ctrl_img: "/qwen-data/silos/312214639.png"
+          # - prompt: "<ALL3D> A photograph of a modern brushed brass adjustable floor lamp with a conical metal shade and square base, positioned beside a white upholstered sofa on a natural fiber rug in a living room.\nfloor lamp, modern lighting, brushed brass, adjustable arm, pivot joints, conical metal shade, square base, slim profile, adjacent: white upholstered sofa, yellow throw pillow, setting: living room, off-white wall, left window with white trim, light wood floor, natural fiber rug, baseboard molding, composition: medium shot, eye-level view, product photography, style: clean, minimalist, warm, natural lighting, soft shadows"
+          #   ctrl_img: "/qwen-data/silos/312214639.png"
+          # - prompt: "The rug pile height is 1."
+          #   ctrl_img: "/qwen-data/control/353747878.jpeg"
+          - prompt: "<ALL3D> A photograph of an ultra-clear, colorless glass wine glass with an elongated tulip bowl, razor-thin rim, and slender cylindrical stem, centered slightly left on a natural oak dining table in a bright dining nook beside a large right-side window with matte white walls. stemware, wine glass, ultra-clear colorless glass, minimalist modern profile, elongated tulip bowl, nearly straight upper two-thirds, gentle inward taper, soft continuous lower curve, convex inner dome above stem, razor-thin polished rim, seamless joins, slender straight cylindrical stem, thin flat circular foot, softened outer edge, foot diameter similar to bowl width, glossy flawless surfaces, no ornamentation, no tint, no texture, subdued realistic reflections, clean continuous rim highlight, on table: folded chambray-blue linen napkin (to right), small white stoneware plate, green grapes, clear bud vase, white ranunculus blooms, setting: bright dining nook, natural oak dining table, subtle straight grain, warm oak tone, matte bright white walls, large window on right, indirect daylight from right, soft-edged elliptical shadow beneath foot, palette: warm oak, soft blue, bright white, clear glass, composition: square 1:1 frame, eye-level view at bowl midline, 80 mm equivalent focal length, wide depth of field, balanced, uncluttered, product photography, photorealistic, catalog-quality, 4k resolution, natural lighting, soft shadows"
+            ctrl_img: "/qwen-data/validation/glass_placed.png"
+          # - prompt: "<ALL3D> A photograph of an ultra-clear, colorless glass wine glass with an elongated tulip bowl, razor-thin rim, and slender cylindrical stem, centered slightly left on a natural oak dining table in a bright dining nook beside a large right-side window with matte white walls. stemware, wine glass, ultra-clear colorless glass, minimalist modern profile, elongated tulip bowl, nearly straight upper two-thirds, gentle inward taper, soft continuous lower curve, convex inner dome above stem, razor-thin polished rim, seamless joins, slender straight cylindrical stem, thin flat circular foot, softened outer edge, foot diameter similar to bowl width, glossy flawless surfaces, no ornamentation, no tint, no texture, subdued realistic reflections, clean continuous rim highlight, on table: folded chambray-blue linen napkin (to right), small white stoneware plate, green grapes, clear bud vase, white ranunculus blooms, setting: bright dining nook, natural oak dining table, subtle straight grain, warm oak tone, matte bright white walls, large window on right, indirect daylight from right, soft-edged elliptical shadow beneath foot, palette: warm oak, soft blue, bright white, clear glass, composition: square 1:1 frame, eye-level view at bowl midline, 80 mm equivalent focal length, wide depth of field, balanced, uncluttered, product photography, photorealistic, catalog-quality, 4k resolution, natural lighting, soft shadows"
+          #   ctrl_img: "/qwen-data/validation/glass_placed.png"
+          # - prompt: "<ALL3D> A photograph of an ultra-clear, colorless glass wine glass with an elongated tulip bowl, razor-thin rim, and slender cylindrical stem, centered slightly left on a natural oak dining table in a bright dining nook beside a large right-side window with matte white walls. stemware, wine glass, ultra-clear colorless glass, minimalist modern profile, elongated tulip bowl, nearly straight upper two-thirds, gentle inward taper, soft continuous lower curve, convex inner dome above stem, razor-thin polished rim, seamless joins, slender straight cylindrical stem, thin flat circular foot, softened outer edge, foot diameter similar to bowl width, glossy flawless surfaces, no ornamentation, no tint, no texture, subdued realistic reflections, clean continuous rim highlight, on table: folded chambray-blue linen napkin (to right), small white stoneware plate, green grapes, clear bud vase, white ranunculus blooms, setting: bright dining nook, natural oak dining table, subtle straight grain, warm oak tone, matte bright white walls, large window on right, indirect daylight from right, soft-edged elliptical shadow beneath foot, palette: warm oak, soft blue, bright white, clear glass, composition: square 1:1 frame, eye-level view at bowl midline, 80 mm equivalent focal length, wide depth of field, balanced, uncluttered, product photography, photorealistic, catalog-quality, 4k resolution, natural lighting, soft shadows"
+          #   ctrl_img: "/qwen-data/validation/glass_placed.png"
+          # - prompt: "<ALL3D> A photograph of an ultra-clear, colorless glass wine glass with an elongated tulip bowl, razor-thin rim, and slender cylindrical stem, centered slightly left on a natural oak dining table in a bright dining nook beside a large right-side window with matte white walls. stemware, wine glass, ultra-clear colorless glass, minimalist modern profile, elongated tulip bowl, nearly straight upper two-thirds, gentle inward taper, soft continuous lower curve, convex inner dome above stem, razor-thin polished rim, seamless joins, slender straight cylindrical stem, thin flat circular foot, softened outer edge, foot diameter similar to bowl width, glossy flawless surfaces, no ornamentation, no tint, no texture, subdued realistic reflections, clean continuous rim highlight, on table: folded chambray-blue linen napkin (to right), small white stoneware plate, green grapes, clear bud vase, white ranunculus blooms, setting: bright dining nook, natural oak dining table, subtle straight grain, warm oak tone, matte bright white walls, large window on right, indirect daylight from right, soft-edged elliptical shadow beneath foot, palette: warm oak, soft blue, bright white, clear glass, composition: square 1:1 frame, eye-level view at bowl midline, 80 mm equivalent focal length, wide depth of field, balanced, uncluttered, product photography, photorealistic, catalog-quality, 4k resolution, natural lighting, soft shadows"
+          #   ctrl_img: "/qwen-data/validation/glass_placed.png"
 # you can add any additional meta info here. [name] is replaced with config name at top
 meta:
   name: "insert"

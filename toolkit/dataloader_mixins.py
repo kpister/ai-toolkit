@@ -73,7 +73,7 @@ transforms_dict = {
     "RandomEqualize": transforms.RandomEqualize(p=0.2),
 }
 
-img_ext_list = [".jpg", ".jpeg", ".png", ".webp"]
+img_ext_list = [".jpg", ".jpeg", ".png", ".webp", "_silo.png"]
 
 
 def standardize_images(images):
@@ -158,7 +158,10 @@ class CaptionMixin:
                     if "caption" in prompt:
                         prompt = prompt["caption"]
 
-                prompt = clean_caption(prompt)
+                prompt = (
+                    clean_caption(prompt)
+                    + "\nKeep the product in the same position and preserve its fidelity."
+                )
         elif os.path.exists(default_prompt_path_with_ext):
             with open(default_prompt_path, "r", encoding="utf-8") as f:
                 prompt = f.read()
@@ -199,7 +202,7 @@ class Bucket:
         self.height = height
         self.file_list_idx: List[int] = []
         self.batch_size = batch_size  # per-bucket batch size
-        
+
     def get_resolution(self):
         """Get the total pixel count for this bucket."""
         return self.width * self.height
@@ -210,21 +213,23 @@ class BucketsMixin:
         self.buckets: Dict[str, Bucket] = {}
         self.batch_indices: List[List[int]] = []
 
-    def calculate_adaptive_batch_size(self, bucket_width: int, bucket_height: int) -> int:
+    def calculate_adaptive_batch_size(
+        self, bucket_width: int, bucket_height: int
+    ) -> int:
         """Calculate batch size for a bucket based on its resolution."""
         # Check if adaptive batch sizing is enabled
-        adaptive_enabled = getattr(self.dataset_config, 'adaptive_batch_size', False)
+        adaptive_enabled = getattr(self.dataset_config, "adaptive_batch_size", False)
         if not adaptive_enabled:
             return self.batch_size
-            
-        base_resolution = getattr(self.dataset_config, 'base_resolution', 512)
+
+        base_resolution = getattr(self.dataset_config, "base_resolution", 512)
         base_pixels = base_resolution * base_resolution
         bucket_pixels = bucket_width * bucket_height
-        
+
         # Scale batch size inversely with pixel count
         # More pixels = smaller batch size to maintain similar memory usage
         scaled_batch_size = max(1, int(self.batch_size * (base_pixels / bucket_pixels)))
-        
+
         return scaled_batch_size
 
     def build_batch_indices(self: "AiToolkitDataset"):
@@ -232,7 +237,7 @@ class BucketsMixin:
         for key, bucket in self.buckets.items():
             # Use per-bucket batch size if available, otherwise calculate it
             bucket_batch_size = bucket.batch_size or self.batch_size
-            
+
             for start_idx in range(0, len(bucket.file_list_idx), bucket_batch_size):
                 end_idx = min(start_idx + bucket_batch_size, len(bucket.file_list_idx))
                 batch = bucket.file_list_idx[start_idx:end_idx]
@@ -344,32 +349,38 @@ class BucketsMixin:
         self.shuffle_buckets()
         self.build_batch_indices()
         if not quiet:
-            adaptive_enabled = getattr(self.dataset_config, 'adaptive_batch_size', False)
+            adaptive_enabled = getattr(
+                self.dataset_config, "adaptive_batch_size", False
+            )
             print_acc(f"Bucket sizes for {self.dataset_path}:")
             for key, bucket in self.buckets.items():
-                batch_info = f" (batch_size: {bucket.batch_size})" if adaptive_enabled else ""
+                batch_info = (
+                    f" (batch_size: {bucket.batch_size})" if adaptive_enabled else ""
+                )
                 print_acc(f"{key}: {len(bucket.file_list_idx)} files{batch_info}")
             print_acc(f"{len(self.buckets)} buckets made")
             if adaptive_enabled:
-                base_resolution = getattr(self.dataset_config, 'base_resolution', 512)
-                print_acc(f"Adaptive batch sizing enabled (base: {base_resolution}x{base_resolution}, base batch: {self.batch_size})")
+                base_resolution = getattr(self.dataset_config, "base_resolution", 512)
+                print_acc(
+                    f"Adaptive batch sizing enabled (base: {base_resolution}x{base_resolution}, base batch: {self.batch_size})"
+                )
 
 
 class CaptionProcessingDTOMixin:
     def __init__(self: "FileItemDTO", *args, **kwargs):
         if hasattr(super(), "__init__"):
             super().__init__(*args, **kwargs)
-            self.raw_caption: str = None
-            self.raw_caption_short: str = None
-            self.caption: str = None
-            self.caption_short: str = None
+            self.raw_caption: str = ""
+            self.raw_caption_short: str = ""
+            self.caption: str = ""
+            self.caption_short: str = ""
 
-            dataset_config: DatasetConfig = kwargs.get("dataset_config", None)
+            dataset_config: DatasetConfig = kwargs.get("dataset_config", "")
             self.extra_values: List[float] = dataset_config.extra_values
 
     # todo allow for loading from sd-scripts style dict
-    def load_caption(self: "FileItemDTO", caption_dict: Union[dict, None] = None):
-        if self.raw_caption is not None:
+    def load_caption(self: "FileItemDTO", caption_dict: dict = None):
+        if self.raw_caption:
             # we already loaded it
             pass
         elif (
@@ -392,6 +403,7 @@ class CaptionProcessingDTOMixin:
             if os.path.exists(prompt_path):
                 with open(prompt_path, "r", encoding="utf-8") as f:
                     prompt = f.read()
+
                     short_caption = None
                     if prompt_path.endswith(".json"):
                         # replace any line endings with commas for \n \r \r\n
@@ -1006,12 +1018,14 @@ class ControlFileItemDTOMixin:
             found_control_images = []
             for control_path in control_path_list:
                 for ext in img_ext_list:
+                    print(os.path.join(control_path, file_name_no_ext + ext))
                     if os.path.exists(
                         os.path.join(control_path, file_name_no_ext + ext)
                     ):
                         found_control_images.append(
                             os.path.join(control_path, file_name_no_ext + ext)
                         )
+                        print("Using relit input")
                         self.has_control_image = True
                         break
             self.control_path = found_control_images
@@ -1020,6 +1034,13 @@ class ControlFileItemDTOMixin:
             elif len(self.control_path) == 1:
                 # only do one
                 self.control_path = self.control_path[0]
+
+            if not self.has_control_image:
+                print("Using non-relit input")
+                self.has_control_image = True
+                self.control_path = os.path.join(
+                    "/qwen-data/silos", file_name_no_ext + ".png"
+                )
 
     def load_control_image(self: "FileItemDTO"):
         control_tensors = []
